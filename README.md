@@ -1,5 +1,14 @@
 # CanKits
 CAN signal tool(python) based on vector's driver.
+
+
+## 2021/3/18
+Steps update:
+1. init a python program  with PyQt's QThread.      ---- done
+2. use Ctype to translate structure to Python's class and adapt DLL.    ----done
+3. Connect to vehicle CAN.        ----done.
+4. receive messages and filter by QThread.        ----done.
+
 ## 2021/3/15
 1. learn how to use github.
 2. translate C++ program into python with PyQt5 GUI.
