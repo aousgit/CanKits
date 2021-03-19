@@ -13,6 +13,10 @@ import time
 from ctypes import *
 import os
 
+
+g_msg = ""
+g_thread_run = False
+
 ##################### Vector structure from C++ ##########################
 ##########################################################################
 ##########################################################################
@@ -110,7 +114,7 @@ class CanKit ():
             window.logs("load Dll error!")
         else:
             #print("Dll loaded!")
-            window.logs("load Dll OK! Welcome to use CAN_Kit...")
+            window.logs("-------load Dll OK! Welcome to use CAN_Kit-------")
         self.dll = dll
         
         #dll.function init
@@ -130,14 +134,17 @@ class CanKit ():
         
         self.appName = "CANK1"
         ret = self.xlOpen()
-        window.logs("xlOpenDriver return " + str(ret))
+        window.logs("------------xlOpenDriver return " + str(ret))
         
         self.hwType = [c_ulong(0),c_ulong(1),c_ulong(55),c_ulong(57),c_ulong(59)]    
                     #{0:"None", 1:"Virtual", 55:"VN1610", 57:"VN1630", 59:"VN1640"}
         self.appChannel=[c_ulong(0),c_ulong(1),c_ulong(2),c_ulong(3)]
-        self.hwIndex = [c_ulong(0),c_ulong(1),c_ulong(2),c_ulong(3)]
+        self.hwIndex = c_ulong(0)
         self.hwChannel = [c_ulong(0),c_ulong(1),c_ulong(2),c_ulong(3)]
         self.busType = c_ulong(1)   #XL_BUS_TYPE_CAN
+        
+        self.hwTypeX = c_ulong(0)
+        self.portHandle = c_ulong(0)
         
     def __del__(self):
         self.xlClose()      #close driver
@@ -145,10 +152,38 @@ class CanKit ():
     
     def OpenPorts(self):
         #3 steps
-        #1st, GetChannelMask
-        #2nd, Permission
-        #3rd, OpenPort
-        pass
+            #1st, GetChannelMask
+        print("enter openports")
+        xlChannelMask_1 = self.xlGetChannelMask(self.hwTypeX,self.hwIndex, self.hwChannel[0])
+        #print ("xlChannelMask_1",xlChannelMask_1)
+        self.Ch1_Mask1 = xlChannelMask_1
+        
+        if self.hwChannel[1] != None:
+            xlChannelMask_2 = self.xlGetChannelMask(self.hwTypeX,self.hwIndex, self.hwChannel[1])
+            #print ("xlChannelMask_2",xlChannelMask_2)
+        
+        xlChannelMask_both = xlChannelMask_1 + xlChannelMask_2
+        self.Ch_Mask = xlChannelMask_both
+        
+            #2nd, Permission
+        xlPermission = c_ulong(xlChannelMask_both) #must use c_ulong(), or error
+        pXlPermission = pointer(xlPermission)
+        
+            #3rd, OpenPort
+        xLportHandle = c_ulong(0)
+        self.portHandle = xLportHandle
+        pXLportHandle = pointer(xLportHandle)
+        
+        xlStatus = self.xlOpenPort(pXLportHandle,self.appName,xlChannelMask_both,pXlPermission,256,3,1)
+        #print ("xlOpenport",xlStatus, "xLportHandle",xLportHandle)
+        if xlStatus == 0:
+            self.Status_openPort = 1
+            window.logs("------------xlOpenPort OK-----------")
+            window.BTN_SetBitrate.setDisabled(0)
+        if xlStatus != 0:
+            window.logs("xlOpenport error!")
+            return -1    
+        return xlStatus
     
     def SetAppConfig(self,iIndex=1):
         
@@ -160,15 +195,16 @@ class CanKit ():
         
         #2nd, get hwType
         hwType = self.hwType[iIndex]
+        self.hwTypeX = hwType
         
         #3rd, set channels 
         for i in range(iChannel_num):
-            xlStatus = self.xlSetApp(self.appName,self.appChannel[i],hwType,self.hwIndex[0],self.hwChannel[i],self.busType)
+            xlStatus = self.xlSetApp(self.appName,self.appChannel[i],hwType,self.hwIndex,self.hwChannel[i],self.busType)
             #print(self.appName,"xlstatus_setApp = ",str(xlStatus),str(self.appChannel[i]))
             if xlStatus != 0: break
         
         self.GetAppConfig()
-        pass
+        return xlStatus
     
     def GetAppConfig(self):
         appChannel = [c_ulong(0),c_ulong(1),c_ulong(2),c_ulong(3)]
@@ -193,7 +229,7 @@ class CanKit ():
         i=0
         window.comboBox_hwType.setCurrentIndex(dict_hwIndex[hwType.value])
         while xlStatus == 0:
-            window.logs("CAN"+str(appChannel[i].value)+" "+str(dict_HW[hwType.value])+" "+str(hwIndex.value)+" channel "+str(hwChannel.value))
+            window.logs("--------CAN"+str(appChannel[i].value)+" "+str(dict_HW[hwType.value])+" "+str(hwIndex.value)+" channel "+str(hwChannel.value))
             i+=1
             xlStatus = self.xlGetApp(self.appName,appChannel[i],pHwType,pHwIndex,pHwChannel,busType)
             if xlStatus != 0: break
@@ -221,20 +257,78 @@ class CanKitMain(QWidget,Ui_Form):
         self.comboBox.setCurrentIndex(3)
         self.comboBox_2.setCurrentIndex(3)
         self.comboBox_3.setCurrentIndex(3)
+        self.BTN_SetBitrate.clicked.connect(self.setBitRate)
+        self.BTN_online.clicked.connect(self.online)
+        self.BTN_offline.clicked.connect(self.offline)
+        self.BTN_send1.clicked.connect(self.send1msgTest)
+        
+        self.BTN_online.setDisabled(1)
+        self.BTN_offline.setDisabled(1)
+        self.BTN_SetBitrate.setDisabled(1)
         
     def emptyText(self):
         self.textBrowser.clear()
         pass
     
-    def show1(self):
+    def online(self):
+        global g_thread_run
+        ##### 6 Thread start.......
         if self.thread == None:
             self.thread = TH1()     #instance of thread
-            self.thread.running = True
+            g_thread_run = True
+            self.thread.signal.connect(self.UI_update)   #connect to callback
+            print("tread set!")
+            self.thread.start( )    #start thread
+            self.BTN_online.setDisabled(1)
+            self.BTN_offline.setDisabled(0)
+        
+        pass
+    
+    def offline(self):
+        global g_thread_run
+        g_thread_run = False
+        self.thread.quit()
+        self.thread = None
+        self.BTN_online.setDisabled(0)
+        self.BTN_offline.setDisabled(1)
+        pass
+    
+    def send1msgTest(self):
+        pass
+    
+    def setBitRate(self):
+        global g_thread_run
+        ##### 3 SetChannelBitrate
+        xlStatus = cankit.xlCanSetChannelBitrate(cankit.portHandle,cankit.Ch_Mask, 500000)
+        print ("setbitrate", xlStatus)
+        if xlStatus != 0: return
+        
+        ##### 4 ActivateChannel
+        xlStatus = cankit.xlActivateChannel(cankit.portHandle,cankit.Ch_Mask,1,8)
+        print ("xlActivateChannel", xlStatus)
+        if xlStatus != 0: return
+        
+        ##### 5 SetNotification
+        m_hMsgEvent = c_ulong()
+        pMsgEvent = pointer(m_hMsgEvent)
+        xlStatus = cankit.xlSetNotification (cankit.portHandle, pMsgEvent, 1);
+        print ("xlSetNotification", xlStatus)
+        if xlStatus != 0: return
+        self.BTN_online.setDisabled(0)
+        
+        
+        pass
+    
+    def show1(self):
+        global g_thread_run
+        if self.thread == None:
+            self.thread = TH1()     #instance of thread
+            g_thread_run = True
             self.thread.signal.connect(self.callback)   #connect to callback
             print("tread set!")
             self.thread.start( )    #start thread
         else:
-            self.thread.running = False
+            g_thread_run = False
             self.thread.quit()
             self.thread = None
             
@@ -245,11 +339,18 @@ class CanKitMain(QWidget,Ui_Form):
         self.logs("device selected " + str(iIndex))
         ret = cankit.SetAppConfig(iIndex)
         if ret!= 0: return
+        print("------------openPorts-----------------")
         ret = cankit.OpenPorts()
             
 
         pass
-            
+    def UI_update(self):
+        global g_msg
+        print("receive emits")
+        print(g_msg)
+        self.logs(g_msg)
+        pass
+    
     def callback(self): #callback
         #print("enter Callback...")
         iIn = self.lineEdit.text()
@@ -267,6 +368,7 @@ class CanKitMain(QWidget,Ui_Form):
 
 
 class TH1(QThread):
+    global g_thread_run
     signal = pyqtSignal(int) #fill in para
     def __init__(self):
         super().__init__()
@@ -275,13 +377,38 @@ class TH1(QThread):
         self.wait()
         
     def run(self):
+        global g_msg
         print("Thread run")
-        i = 1;
-        for i in range(1000):
-            if self.running == False: break
-            self.signal.emit(i) #emit signal
-            print("signal emitted!"+ str(i))
-            time.sleep(0.2)
+        while(g_thread_run):
+            xlReceive = cankit.dll.xlReceive
+            msgsrx = c_uint(1)
+            pMsgsrx = pointer(msgsrx)
+            xlEvent = XL_EVENT()
+            pxlEvent = pointer(xlEvent)
+            #xlString = dll.xlGetEventString
+            xlStatus = xlReceive(cankit.portHandle,pMsgsrx,pxlEvent)
+            if (xlStatus != 10):
+                print ("xlReceive = ", xlStatus)
+                id = xlEvent.tagData.msg.id
+                id_hex = hex(id)
+                list1 = []
+                for i in range(8):
+                    iData = xlEvent.tagData.msg.data[i]
+                    hexData = hex(iData)[2:].zfill(2)
+                    list1.append(hexData)
+                chanX = xlEvent.chanIndex 
+                print ("channel is ", chanX)
+                sData = " ".join(list1)
+                Sout =  "C"+ str(chanX) + " "+ str( id_hex)+ " "+ sData+" " 
+                print (Sout)
+                g_msg = Sout
+                self.signal.emit(1) #emit signal
+            
+            
+            
+            
+#             print("signal emitted!"+ str(i))
+#             time.sleep(0.2)
 
 
 
