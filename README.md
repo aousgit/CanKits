@@ -1,6 +1,13 @@
 # CanKits
 CAN signal tool(python) based on vector's driver.
 
+## 2021/3/23
+Steps update:
+5. transmit messages
+5.1 one defined message test function -- done
+5.2 fill message in lineEdit and transmit it --done
+5.3 series messages with different time interval  -- done
+6. mask bit29 messages  -- when connect to vehicle, CAN messages too much to fresh UI, need to be fixed next.
 
 ## 2021/3/18
 Steps update:
