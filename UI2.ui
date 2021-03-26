@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
+    <width>703</width>
     <height>480</height>
    </rect>
   </property>
@@ -39,45 +39,12 @@
       <attribute name="title">
        <string>Normal</string>
       </attribute>
-      <widget class="QPushButton" name="pushButton">
-       <property name="geometry">
-        <rect>
-         <x>520</x>
-         <y>350</y>
-         <width>75</width>
-         <height>23</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>GO</string>
-       </property>
-      </widget>
-      <widget class="QLCDNumber" name="lcdNumber">
-       <property name="geometry">
-        <rect>
-         <x>440</x>
-         <y>230</y>
-         <width>151</width>
-         <height>61</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="lineEdit">
-       <property name="geometry">
-        <rect>
-         <x>440</x>
-         <y>310</y>
-         <width>151</width>
-         <height>21</height>
-        </rect>
-       </property>
-      </widget>
       <widget class="QTextBrowser" name="textBrowser">
        <property name="geometry">
         <rect>
          <x>0</x>
          <y>160</y>
-         <width>351</width>
+         <width>341</width>
          <height>221</height>
         </rect>
        </property>
@@ -332,6 +299,124 @@ p, li { white-space: pre-wrap; }
         <string>Send 1 Msg test</string>
        </property>
       </widget>
+      <widget class="QPlainTextEdit" name="plainTextEdit">
+       <property name="geometry">
+        <rect>
+         <x>380</x>
+         <y>60</y>
+         <width>211</width>
+         <height>81</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <weight>50</weight>
+         <bold>false</bold>
+         <underline>true</underline>
+         <strikeout>false</strikeout>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="plainText">
+        <string>18DA10F1 03 22 01 9E 00 00 00 00
+18DA10F1 03 22 01 8D 00 00 00 00</string>
+       </property>
+       <property name="centerOnScroll">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="Combo_10ms">
+       <property name="geometry">
+        <rect>
+         <x>600</x>
+         <y>60</y>
+         <width>69</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>10ms</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>100ms</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1000ms</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QPushButton" name="BTN_sendmsgs">
+       <property name="geometry">
+        <rect>
+         <x>600</x>
+         <y>100</y>
+         <width>75</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial Black</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>SEND</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="checkBox">
+       <property name="geometry">
+        <rect>
+         <x>240</x>
+         <y>140</y>
+         <width>101</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Only show 29Bits</string>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="listWidget">
+       <property name="geometry">
+        <rect>
+         <x>380</x>
+         <y>170</y>
+         <width>291</width>
+         <height>71</height>
+        </rect>
+       </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
+       </property>
+       <property name="modelColumn">
+        <number>0</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>001-Unlock SGW</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>002-Clear PCM DTC</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>003-TBD...</string>
+        </property>
+       </item>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -356,5 +441,22 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>listWidget</sender>
+   <signal>itemDoubleClicked(QListWidgetItem*)</signal>
+   <receiver>tabWidget</receiver>
+   <slot>repaint()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>528</x>
+     <y>237</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>563</x>
+     <y>319</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

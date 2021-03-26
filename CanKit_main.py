@@ -9,6 +9,8 @@ from UI2 import Ui_Form
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtCore import *
 import time
+import threading
+import datetime
 
 from ctypes import *
 import os
@@ -16,6 +18,8 @@ import os
 
 g_msg = ""
 g_thread_run = False
+g_t = 0
+g_cnt = 0
 
 ##################### Vector structure from C++ ##########################
 ##########################################################################
@@ -150,6 +154,40 @@ class CanKit ():
         self.xlClose()      #close driver
         pass    
     
+    def sendOneMsg(self,msg):
+        #"18DA10F1 03 22 01 9E 00 00 00 00 "
+        list_msg = msg.split()
+        _id = list_msg[0]
+        iId = int(_id, 16) | 0x80000000
+        hexID = hex(iId)
+        #print("CANID: ", hexID)
+        
+        xlEvent = XL_EVENT()
+        xlEvent.tag= 10
+        xlEvent.tagData.msg.id = iId
+        xlEvent.tagData.msg.dlc = 8
+        xlEvent.tagData.msg.flags = 0
+        xlEvent.tagData.msg.data[0] = int(list_msg[1],16);
+        xlEvent.tagData.msg.data[1] = int(list_msg[2],16);
+        xlEvent.tagData.msg.data[2] = int(list_msg[3],16);
+        xlEvent.tagData.msg.data[3] = int(list_msg[4],16);
+        xlEvent.tagData.msg.data[4] = int(list_msg[5],16);
+        xlEvent.tagData.msg.data[5] = int(list_msg[6],16);
+        xlEvent.tagData.msg.data[6] = int(list_msg[7],16);
+        xlEvent.tagData.msg.data[7] = int(list_msg[8],16);
+        
+        messageCount = c_uint(1)
+        pMsgCnt = pointer(messageCount)
+        pxlEvent = pointer(xlEvent)
+        
+        xlStatus = self.xlCanTransmit(self.portHandle,self.Ch1_Mask1, pMsgCnt, pxlEvent)
+        #print("xlTransmit = ", xlStatus)
+        if xlStatus == 0:
+            return 0
+        
+        pass
+    
+    
     def OpenPorts(self):
         #3 steps
             #1st, GetChannelMask
@@ -239,7 +277,7 @@ class CanKit ():
 
 ##------------------Class Cankit end--------------------##
 
-
+g_b_29bit = False
 
 class CanKitMain(QWidget,Ui_Form):
     def __init__(self):
@@ -248,11 +286,14 @@ class CanKitMain(QWidget,Ui_Form):
         self.init_ui()  
 
     def init_ui(self):
-        self.pushButton.clicked.connect(self.show1)
+        
+        #self.pushButton.clicked.connect(self.show1)
         self.BTN_Device.clicked.connect(self.chooseDevice)
         self.BTN_empty.clicked.connect(self.emptyText)
-        self.lineEdit.setText("0")
+        #self.lineEdit.setText("0")
         self.thread= None
+        
+        
         
         self.comboBox.setCurrentIndex(3)
         self.comboBox_2.setCurrentIndex(3)
@@ -261,17 +302,48 @@ class CanKitMain(QWidget,Ui_Form):
         self.BTN_online.clicked.connect(self.online)
         self.BTN_offline.clicked.connect(self.offline)
         self.BTN_send1.clicked.connect(self.send1msgTest)
+        self.BTN_sendmsgs.clicked.connect(self.sendMsgs)
         
         self.BTN_online.setDisabled(1)
         self.BTN_offline.setDisabled(1)
         self.BTN_SetBitrate.setDisabled(1)
+        self.BTN_send1.setDisabled(1)
+        #self.BTN_sendmsgs.setDisabled(1)
+        
+        self.sends = {}
+        if os.path.exists("sendMsgs.in"):
+            self.listWidget.clear()
+#             print("file in")
+            fp = open("sendMsgs.in")
+            slist = fp.readlines()
+            
+            for ss in slist:
+                sky = ss.strip("\n").split(":")
+                msgs = sky[1]
+                msgs = msgs.replace(",","\n")
+                self.sends[sky[0]] = msgs
+                self.listWidget.addItem(sky[0])
+            print (self.sends)
+#             self.listWidget.takeItem(3)
+#             print(self.listWidget.count())   
+        else:
+            pass
         
     def emptyText(self):
         self.textBrowser.clear()
         pass
     
+    def listClicked(self):
+        #print(12345)
+        iIndex = self.listWidget.currentRow()       #########################################2021/3/19 here...
+        text1 = self.listWidget.item(iIndex).text()
+        output1 = text1+":="+self.sends[text1]
+        self.plainTextEdit.setPlainText(self.sends[text1])
+        self.logs(output1)
+        pass
+    
     def online(self):
-        global g_thread_run
+        global g_thread_run,g_b_29bit
         ##### 6 Thread start.......
         if self.thread == None:
             self.thread = TH1()     #instance of thread
@@ -281,6 +353,12 @@ class CanKitMain(QWidget,Ui_Form):
             self.thread.start( )    #start thread
             self.BTN_online.setDisabled(1)
             self.BTN_offline.setDisabled(0)
+            self.BTN_send1.setDisabled(0)
+            self.BTN_sendmsgs.setDisabled(0)
+            
+            s = self.checkBox.checkState()
+            if s == 2:g_b_29bit = True
+            else: g_b_29bit = False
         
         pass
     
@@ -291,9 +369,71 @@ class CanKitMain(QWidget,Ui_Form):
         self.thread = None
         self.BTN_online.setDisabled(0)
         self.BTN_offline.setDisabled(1)
+        self.BTN_send1.setDisabled(1)
+        #self.BTN_sendmsgs.setDisabled(1)
+        pass
+    
+    def Timer_1(self):
+        global g_t,g_cnt
+        
+        ss = self.s_list[g_cnt]
+        print("ss",ss)
+        cankit.sendOneMsg(ss)
+        g_cnt += 1
+        if g_cnt < len(self.s_list):
+            g_t= threading.Timer(self.t_intv,self.Timer_1)
+            g_t.start()
+        else:
+            pass
+        pass
+    
+    def sendMsgs(self):
+        global g_t,g_cnt
+        s_msgs = self.plainTextEdit.toPlainText()
+        
+        i_interval = self.Combo_10ms.currentIndex()
+        #print("interval_index", i_interval)
+        dict_time = {0:0.01, 1:0.1, 2:1}
+        t_interval = dict_time[i_interval]
+        self.t_intv = t_interval
+        self.s_list = s_msgs.split("\n")
+        g_cnt = 0
+        g_t= threading.Timer(t_interval,self.Timer_1)
+        g_t.start()
+        
+        
+     
         pass
     
     def send1msgTest(self):
+        
+        #cankit.sendOneMsg("18DA10F1 03 22 01 9E 00 00 00 00 ")
+               
+        
+        
+        #18dacbf1 05 31 01 05 01 00 01    SGM Unlock
+        xlEvent = XL_EVENT()
+        xlEvent.tag= 10
+        xlEvent.tagData.msg.id = 0x98dacbf1
+        xlEvent.tagData.msg.dlc = 6
+        xlEvent.tagData.msg.flags = 0
+        xlEvent.tagData.msg.data[0] = 0x05;
+        xlEvent.tagData.msg.data[1] = 0x31;
+        xlEvent.tagData.msg.data[2] = 0x01;
+        xlEvent.tagData.msg.data[3] = 0x05;
+        xlEvent.tagData.msg.data[4] = 0x00;
+        xlEvent.tagData.msg.data[5] = 0x01;
+        #xlEvent.tagData.msg.data[6] = 0x00;
+        #xlEvent.tagData.msg.data[7] = 0x00;
+        
+        xlCanTransmit = cankit.dll.xlCanTransmit
+        messageCount = c_uint(1)
+        pMsgCnt = pointer(messageCount)
+        pxlEvent = pointer(xlEvent)
+        
+        xlStatus = xlCanTransmit(cankit.portHandle,cankit.Ch1_Mask1,pMsgCnt, pxlEvent)
+        #print ("xltransmit", xlStatus)
+        
         pass
     
     def setBitRate(self):
@@ -346,9 +486,12 @@ class CanKitMain(QWidget,Ui_Form):
         pass
     def UI_update(self):
         global g_msg
-        print("receive emits")
-        print(g_msg)
-        self.logs(g_msg)
+        #print("receive emits")
+        #print(g_msg)
+        tt2 = datetime.datetime.time(datetime.datetime.now())
+        s_tt2 = "["+str(tt2)[:-3]+"]  "
+        out = s_tt2 + g_msg
+        self.logs(out)
         pass
     
     def callback(self): #callback
@@ -369,6 +512,7 @@ class CanKitMain(QWidget,Ui_Form):
 
 class TH1(QThread):
     global g_thread_run
+    global g_b_29bit
     signal = pyqtSignal(int) #fill in para
     def __init__(self):
         super().__init__()
@@ -388,8 +532,11 @@ class TH1(QThread):
             #xlString = dll.xlGetEventString
             xlStatus = xlReceive(cankit.portHandle,pMsgsrx,pxlEvent)
             if (xlStatus != 10):
-                print ("xlReceive = ", xlStatus)
+                #print ("xlReceive = ", xlStatus)
                 id = xlEvent.tagData.msg.id
+                CanType = xlEvent.tagData.msg.id & 0x80000000   # CanType = 0 :11 bit msg
+                CanBypass = xlEvent.tagData.msg.id & 0x7fff0000 # Bypass some abnormal 29 bit msg.
+                
                 id_hex = hex(id)
                 list1 = []
                 for i in range(8):
@@ -397,13 +544,33 @@ class TH1(QThread):
                     hexData = hex(iData)[2:].zfill(2)
                     list1.append(hexData)
                 chanX = xlEvent.chanIndex 
-                print ("channel is ", chanX)
+                #print ("channel is ", chanX)
                 sData = " ".join(list1)
-                Sout =  "C"+ str(chanX) + " "+ str( id_hex)+ " "+ sData+" " 
-                print (Sout)
-                g_msg = Sout
-                self.signal.emit(1) #emit signal
-            
+                Sout =  "CH"+ str(chanX) + ", "+ str( id_hex)+ " "+ sData+" " 
+                
+###------------save to .ASC file------------###
+
+###-----------------end ASC file------------###             
+
+
+######-------PID show and save--------
+
+###############################################
+
+##########---CCP show and save--------
+
+###############################################   
+                
+                if (g_b_29bit):
+                    if( CanType== 0):
+                        continue
+                    else:
+                        if (CanBypass==0x1E340000 or CanBypass == 0x1E360000):continue  #bypass some 29bit msg
+                        g_msg = Sout
+                        self.signal.emit(1) #emit signal
+                else:
+                    g_msg = Sout
+                    self.signal.emit(1) #emit signal
             
             
             
