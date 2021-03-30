@@ -1,6 +1,13 @@
 # CanKits
 CAN signal tool(python) based on vector's driver.
 
+## 2021/3/30
+Steps update:
+6. CAN messages too much issue - add time.time() to reduce UI fresh load by 100ms.
+6.2 + DTC read & clear on UI
+6.3 DTC read by other ECUs (except Engine Control Unit)
+7. on holding...
+
 ## 2021/3/23
 Steps update:
 5. transmit messages
