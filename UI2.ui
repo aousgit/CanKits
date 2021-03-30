@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../13.jpg</normaloff>../../13.jpg</iconset>
+    <normaloff>../../../Users/c7278pt/13.jpg</normaloff>../../../Users/c7278pt/13.jpg</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -24,7 +24,7 @@
       <bool>false</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <property name="documentMode">
       <bool>true</bool>
@@ -289,8 +289,8 @@ p, li { white-space: pre-wrap; }
       <widget class="QPushButton" name="BTN_send1">
        <property name="geometry">
         <rect>
-         <x>410</x>
-         <y>20</y>
+         <x>0</x>
+         <y>390</y>
          <width>121</width>
          <height>23</height>
         </rect>
@@ -303,7 +303,7 @@ p, li { white-space: pre-wrap; }
        <property name="geometry">
         <rect>
          <x>380</x>
-         <y>60</y>
+         <y>70</y>
          <width>211</width>
          <height>81</height>
         </rect>
@@ -330,7 +330,7 @@ p, li { white-space: pre-wrap; }
        <property name="geometry">
         <rect>
          <x>600</x>
-         <y>60</y>
+         <y>70</y>
          <width>69</width>
          <height>22</height>
         </rect>
@@ -355,7 +355,7 @@ p, li { white-space: pre-wrap; }
        <property name="geometry">
         <rect>
          <x>600</x>
-         <y>100</y>
+         <y>110</y>
          <width>75</width>
          <height>41</height>
         </rect>
@@ -387,9 +387,9 @@ p, li { white-space: pre-wrap; }
        <property name="geometry">
         <rect>
          <x>380</x>
-         <y>170</y>
+         <y>10</y>
          <width>291</width>
-         <height>71</height>
+         <height>51</height>
         </rect>
        </property>
        <property name="autoFillBackground">
@@ -417,22 +417,101 @@ p, li { white-space: pre-wrap; }
         </property>
        </item>
       </widget>
+      <widget class="QListWidget" name="listDTC">
+       <property name="geometry">
+        <rect>
+         <x>380</x>
+         <y>210</y>
+         <width>291</width>
+         <height>161</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="BTN_ReadDTC">
+       <property name="geometry">
+        <rect>
+         <x>380</x>
+         <y>180</y>
+         <width>75</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Read DTC</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="BTN_ClearDTC">
+       <property name="geometry">
+        <rect>
+         <x>590</x>
+         <y>180</y>
+         <width>75</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Clear DTC</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
        <string>Tab 2</string>
       </attribute>
-      <widget class="QRadioButton" name="radioButton">
+      <widget class="QListWidget" name="ListMsg">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>50</y>
+         <width>221</width>
+         <height>381</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="ListPID">
+       <property name="geometry">
+        <rect>
+         <x>230</x>
+         <y>50</y>
+         <width>221</width>
+         <height>381</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="ListCCP">
        <property name="geometry">
         <rect>
          <x>460</x>
-         <y>160</y>
-         <width>82</width>
-         <height>17</height>
+         <y>50</y>
+         <width>221</width>
+         <height>381</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="BTN_MsgGo">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>10</y>
+         <width>75</width>
+         <height>23</height>
         </rect>
        </property>
        <property name="text">
-        <string>RadioButton</string>
+        <string>CAN GO</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="geometry">
+        <rect>
+         <x>80</x>
+         <y>10</y>
+         <width>75</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>PushButton</string>
        </property>
       </widget>
      </widget>

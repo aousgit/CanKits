@@ -20,7 +20,7 @@ g_msg = ""
 g_thread_run = False
 g_t = 0
 g_cnt = 0
-
+g_Code = {"00":"P","01":"C","10":"B","11":"U"}
 ##################### Vector structure from C++ ##########################
 ##########################################################################
 ##########################################################################
@@ -275,9 +275,12 @@ class CanKit ():
         
         return xlStatus    
 
+
 ##------------------Class Cankit end--------------------##
 
 g_b_29bit = False
+g_DTC = False
+g_EcuList = []
 
 class CanKitMain(QWidget,Ui_Form):
     def __init__(self):
@@ -293,7 +296,7 @@ class CanKitMain(QWidget,Ui_Form):
         #self.lineEdit.setText("0")
         self.thread= None
         
-        
+        self.ECUs = []
         
         self.comboBox.setCurrentIndex(3)
         self.comboBox_2.setCurrentIndex(3)
@@ -303,6 +306,9 @@ class CanKitMain(QWidget,Ui_Form):
         self.BTN_offline.clicked.connect(self.offline)
         self.BTN_send1.clicked.connect(self.send1msgTest)
         self.BTN_sendmsgs.clicked.connect(self.sendMsgs)
+        
+        self.BTN_ReadDTC.clicked.connect(self.ReadDTC)
+        self.BTN_ClearDTC.clicked.connect(self.ClearDTC)
         
         self.BTN_online.setDisabled(1)
         self.BTN_offline.setDisabled(1)
@@ -323,12 +329,58 @@ class CanKitMain(QWidget,Ui_Form):
                 msgs = msgs.replace(",","\n")
                 self.sends[sky[0]] = msgs
                 self.listWidget.addItem(sky[0])
-            print (self.sends)
+            #print (self.sends)
 #             self.listWidget.takeItem(3)
 #             print(self.listWidget.count())   
         else:
             pass
+    def ReadDTC(self):
+        global g_DTC,g_EcuList
+        sSend=""
+        if os.path.exists("ECU_ID.txt"):
+            print("file yes")
+            self.ECUs.clear()
+            fp = open("ECU_ID.txt")
+            s_all = fp.readlines()
+            for ss in s_all:
+                ss = ss.strip("\n")
+                li = ss.split(",")
+                self.ECUs.append(li)
+            g_EcuList= self.ECUs
+            #print(self.ECUs)
+            g_DCT = True
+            for item in self.ECUs:
+                #print(item)
+                if item[3] == "1":  #just send CH1
+                    if item[0] == "PCM":
+                        sSend ="18DA10F1 04 18 00 FF 00 00 00 00"
+                    else:
+                        sId = item[1]
+                        sMsgs = " 03 19 02 0D 00 00 00 00"
+                        sSend = item[1]+sMsgs
+                        pass
+                    #print("sSend :", sSend)
+                    cankit.sendOneMsg(sSend)
+                    time.sleep(0.1)
+                    
+                    
+                elif item[3]=="3":  #backup CH3
+                    pass
+                else:
+                    pass
+            time.sleep(2)
+            g_DCT = False
+        else:
+            g_DCT = True
+            sSend="18DA10F1 04 18 00 FF 00 00 00 00"
+            cankit.sendOneMsg(sSend)
+            time.sleep(2)
+            g_DCT = False
         
+        print("Read DTC")   
+        pass
+    def ClearDTC(self):
+        print("clear DTC")    
     def emptyText(self):
         self.textBrowser.clear()
         pass
@@ -511,8 +563,9 @@ class CanKitMain(QWidget,Ui_Form):
 
 
 class TH1(QThread):
-    global g_thread_run
+    global g_thread_run,g_EcuList
     global g_b_29bit
+    global g_DCT
     signal = pyqtSignal(int) #fill in para
     def __init__(self):
         super().__init__()
@@ -521,9 +574,10 @@ class TH1(QThread):
         self.wait()
         
     def run(self):
-        global g_msg
+        global g_msg,g_UItimer
         print("Thread run")
         while(g_thread_run):
+            g_UItime = time.time()
             xlReceive = cankit.dll.xlReceive
             msgsrx = c_uint(1)
             pMsgsrx = pointer(msgsrx)
@@ -547,6 +601,49 @@ class TH1(QThread):
                 #print ("channel is ", chanX)
                 sData = " ".join(list1)
                 Sout =  "CH"+ str(chanX) + ", "+ str( id_hex)+ " "+ sData+" " 
+
+####################ReadDTC-----------------##
+                if (True): #g_DTC
+                    #print(id_hex) 0x98daf110
+                    #print(g_EcuList)
+                    for item in g_EcuList:
+                        s_up = id_hex[3:].upper()
+                        if s_up in item[2]:####
+                            if sData[3:8]=="59 02":         #other ECM 
+                                if sData[:2]== "03":
+                                    
+                                    fin_code = item[0] + " ----No DTC code"
+                                    window.listDTC.addItem(fin_code)
+                                else:
+                                    ss = sData[12:20]
+                                    liss = ss.split(" ")
+                                    sjoin = "".join(liss)[1:]
+                                    sjoins = sjoin[:-2] + "-" + sjoin[-2:]
+                                    
+                                    sHex = int(sData[12],16)
+                                    sC1 = sHex & 0b0011
+                                    sB2 = bin(sHex)
+                    
+                                    sKey = sB2[2:4]
+                                    sC1_ = bin(sC1)[2:]
+                                    sCode = g_Code[sKey]
+                                    fin_code = item[0]+ " ----"+sCode + sC1_ + sjoins
+#                                     print (fin_code)    
+                                    window.listDTC.addItem(fin_code)
+                                
+                            elif sData[:2] == "10" and sData[6:8] == "59":
+                                print("need 30 feecback")
+                                pass
+                            if sData[3:8]=="58 01":
+                                print ("ECM enter OK")
+                            elif sData[:2] == "10" and sData[6:8] == "58":
+                                print("ECM need 30 feecback")
+                                pass
+                                #2 check this DTC
+                
+#18DAF160 10 0F 59 02 7F 9A 7E 56
+###----------------End DTC------------------##
+                
                 
 ###------------save to .ASC file------------###
 
@@ -569,16 +666,18 @@ class TH1(QThread):
                         g_msg = Sout
                         self.signal.emit(1) #emit signal
                 else:
+                    tNow = time.time()
                     g_msg = Sout
-                    self.signal.emit(1) #emit signal
-            
-            
+                    if (tNow - g_UItime > 0.1):
+                        self.signal.emit(1) #emit signal
+                        g_UItime = tNow
+                        
             
 #             print("signal emitted!"+ str(i))
 #             time.sleep(0.2)
 
 
-
+g_UItimer = 0
 
 
 
