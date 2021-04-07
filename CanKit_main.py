@@ -322,7 +322,6 @@ class CanKitMain(QWidget,Ui_Form):
 #             print("file in")
             fp = open("sendMsgs.in")
             slist = fp.readlines()
-            
             for ss in slist:
                 sky = ss.strip("\n").split(":")
                 msgs = sky[1]
@@ -336,6 +335,7 @@ class CanKitMain(QWidget,Ui_Form):
             pass
     def ReadDTC(self):
         global g_DTC,g_EcuList
+        self.listDTC.clear()
         sSend=""
         if os.path.exists("ECU_ID.txt"):
             print("file yes")
@@ -562,10 +562,16 @@ class CanKitMain(QWidget,Ui_Form):
         
 
 
+sTotal = ""
+s_more_id = ""
+b_more = False  #default no more info. just 1 msg.
+
+
 class TH1(QThread):
     global g_thread_run,g_EcuList
     global g_b_29bit
     global g_DCT
+    global sTotal, s_more_id, b_more
     signal = pyqtSignal(int) #fill in para
     def __init__(self):
         super().__init__()
@@ -606,9 +612,41 @@ class TH1(QThread):
                 if (True): #g_DTC
                     #print(id_hex) 0x98daf110
                     #print(g_EcuList)
+                    
+                    # 10 - feedback 30
+                    if sData[:2] == "10":
+                        #time.sleep(0.05)
+                        #print("get 10", id_hex) #get 10 0x98daf140
+                        #print(sData)            #10 0f 59 02 7f 9a 7e 56
+                        
+                        id_back = "1" + id_hex[3:6]+ id_hex[8:10]+ id_hex[6:8]
+                        #print(id_back, "id_back")
+                        s2 = id_back +" 30 00 00 00 00 00 00 00"
+                        print(s2)
+                        cankit.sendOneMsg(s2)
+                        
+                        #18DAF140 10 0F 59 02 7F 9A 7E 56
+                        ########################18DA40F1 30 00 00 00 00 00 00
+                        #18DAF140 21 2F C2 36 00 28 C4 01
+                        #18DAF140 22 00 28
+                        sTotal = ""
+                        b_more = True
+                        s_more_id = id_hex
+                        print(s_more_id,"s_more_id")
+                        
                     for item in g_EcuList:
                         s_up = id_hex[3:].upper()
+                        
+                        
                         if s_up in item[2]:####
+                            
+                            print(s_up, s_more_id,"b_more=",b_more)
+                            if b_more and s_more_id == id_hex:      # to handle several msgs
+                                sTotal += sData
+                                
+                                print(sTotal,"sTotal")
+                                pass
+                            
                             if sData[3:8]=="59 02":         #other ECM 
                                 if sData[:2]== "03":
                                     
@@ -627,18 +665,24 @@ class TH1(QThread):
                                     sKey = sB2[2:4]
                                     sC1_ = bin(sC1)[2:]
                                     sCode = g_Code[sKey]
-                                    fin_code = item[0]+ " ----"+sCode + sC1_ + sjoins
+                                    fin_code = item[0]+ "\t"+sCode + sC1_ + sjoins
 #                                     print (fin_code)    
                                     window.listDTC.addItem(fin_code)
                                 
                             elif sData[:2] == "10" and sData[6:8] == "59":
-                                print("need 30 feecback")
+                                #s_more_id = s_up
                                 pass
+                            
+                            
+                            
+                            
+                                
+                                
                             if sData[3:8]=="58 01":
                                 print ("ECM enter OK")
-                            elif sData[:2] == "10" and sData[6:8] == "58":
-                                print("ECM need 30 feecback")
-                                pass
+#                             elif sData[:2] == "10" and sData[6:8] == "58":
+#                                 print("ECM need 30 feecback")
+#                                 pass
                                 #2 check this DTC
                 
 #18DAF160 10 0F 59 02 7F 9A 7E 56
